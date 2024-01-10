@@ -41,6 +41,13 @@ func NewEtcdRegistry(endpoints []string, ttl int64, opts ...Option) (Registry, e
 	}, nil
 }
 
+func NewEtcdRegistryWithClient(etcdClient *clientv3.Client, ttl int64) (Registry, error) {
+	return &etcdRegistry{
+		etcdClient: etcdClient,
+		leaseTTL:   ttl,
+	}, nil
+}
+
 func (e *etcdRegistry) Register(endpoint *Endpoint) error {
 	if err := validateRegistryInfo(endpoint); err != nil {
 		return err
