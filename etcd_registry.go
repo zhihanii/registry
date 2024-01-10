@@ -75,13 +75,13 @@ func (e *etcdRegistry) Deregister(endpoint *Endpoint) error {
 
 func (e *etcdRegistry) register(endpoint *Endpoint, leaseID clientv3.LeaseID) error {
 	data, err := json.Marshal(discovery.NewInstance(endpoint.Network,
-		endpoint.Addr, endpoint.Weight, endpoint.Tags))
+		endpoint.Address, endpoint.Weight, endpoint.Tags))
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	_, err = e.etcdClient.Put(ctx, serviceKey(endpoint.ServiceName, endpoint.Addr), string(data),
+	_, err = e.etcdClient.Put(ctx, serviceKey(endpoint.ServiceName, endpoint.Address), string(data),
 		clientv3.WithLease(leaseID))
 	return err
 }
@@ -89,7 +89,7 @@ func (e *etcdRegistry) register(endpoint *Endpoint, leaseID clientv3.LeaseID) er
 func (e *etcdRegistry) deregister(endpoint *Endpoint) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	_, err := e.etcdClient.Delete(ctx, serviceKey(endpoint.ServiceName, endpoint.Addr))
+	_, err := e.etcdClient.Delete(ctx, serviceKey(endpoint.ServiceName, endpoint.Address))
 	return err
 }
 
@@ -132,7 +132,7 @@ func validateRegistryInfo(endpoint *Endpoint) error {
 	if endpoint.Network == "" {
 		return fmt.Errorf("missing network in Register")
 	}
-	if endpoint.Addr == "" {
+	if endpoint.Address == "" {
 		return fmt.Errorf("missing addr in Register")
 	}
 	return nil
