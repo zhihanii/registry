@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/zhihanii/zlog"
 	"strings"
 	"time"
 
@@ -99,11 +100,11 @@ func (e *etcdRegistry) keepAlive(metadata *registerMetadata) error {
 		return err
 	}
 	go func() {
-		// zap.Infof("start keepalive lease %x for etcd registry", metadata.leaseID)
+		zlog.Infof("start keepalive lease %x for etcd registry", metadata.leaseID)
 		for range keepAlive {
 			select {
 			case <-metadata.ctx.Done():
-				// klog.Infof("stop keepalive lease %x for etcd registry", meta.leaseID)
+				zlog.Infof("stop keepalive lease %x for etcd registry", metadata.leaseID)
 				return
 			default:
 			}
