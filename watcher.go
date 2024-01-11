@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/zhihanii/discovery"
+	"github.com/zhihanii/zlog"
 	"time"
 
-	"github.com/zhihanii/discovery"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -37,19 +38,20 @@ func (w *watcher) watchChannel(ctx context.Context) (WatchChannel, error) {
 
 	initUpdates := make([]*Update, 0, len(resp.Kvs))
 	for _, kv := range resp.Kvs {
-		var instance instanceInfo
-		if err1 := json.Unmarshal(kv.Value, &instance); err1 != nil {
-			//log
+		var ins instance
+		if err1 := json.Unmarshal(kv.Value, &ins); err1 != nil {
+			zlog.Errorf("unmarshal:%v", err1)
 			continue
 		}
 		up := &Update{
 			Op:  Add,
 			Key: string(kv.Key),
 			Instance: discovery.NewInstance(
-				instance.Network,
-				instance.Address,
-				instance.Weight,
-				instance.Tags,
+				ins.Network,
+				ins.Address,
+				ins.Port,
+				ins.Weight,
+				ins.Tags,
 			),
 		}
 		initUpdates = append(initUpdates, up)
@@ -74,27 +76,27 @@ func (w *watcher) watch(ctx context.Context, rev int64, upch chan []*Update) {
 			return
 		case wresp, ok := <-wch:
 			if !ok {
-				//log
+				zlog.Infof("watch channel closed")
 				return
 			}
 			if wresp.Err() != nil {
-				//log
+				zlog.Errorf("watch response err:%v", wresp.Err())
 				return
 			}
 
 			deltaUps := make([]*Update, 0, len(wresp.Events))
 			for _, e := range wresp.Events {
 				var (
-					instance instanceInfo
-					err      error
-					op       Operation
+					ins instance
+					err error
+					op  Operation
 				)
 				switch e.Type {
 				case clientv3.EventTypePut:
-					err = json.Unmarshal(e.Kv.Value, &instance)
+					err = json.Unmarshal(e.Kv.Value, &ins)
 					op = Add
 					if err != nil {
-						//log
+						zlog.Errorf("unmarshal:%v", err)
 						continue
 					}
 				case clientv3.EventTypeDelete:
@@ -106,10 +108,11 @@ func (w *watcher) watch(ctx context.Context, rev int64, upch chan []*Update) {
 					Op:  op,
 					Key: string(e.Kv.Key),
 					Instance: discovery.NewInstance(
-						instance.Network,
-						instance.Address,
-						instance.Weight,
-						instance.Tags,
+						ins.Network,
+						ins.Address,
+						ins.Port,
+						ins.Weight,
+						ins.Tags,
 					),
 				}
 				deltaUps = append(deltaUps, up)

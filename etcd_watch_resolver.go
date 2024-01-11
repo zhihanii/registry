@@ -2,47 +2,12 @@ package registry
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/zhihanii/discovery"
 	"sync"
 
-	"github.com/zhihanii/discovery"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
-
-type etcdWatchResolverBuilder struct {
-	c *clientv3.Client
-}
-
-func NewEtcdWatchResolverBuilder(c *clientv3.Client) (ResolverBuilder, error) {
-	if c == nil {
-		return nil, errors.New("invalid etcd client")
-	}
-
-	return &etcdWatchResolverBuilder{c: c}, nil
-}
-
-func (b *etcdWatchResolverBuilder) Build(target string, update UpdateFunc) (discovery.Resolver, error) {
-	r := &etcdWatchResolver{
-		c:      b.c,
-		target: target,
-		update: update,
-	}
-	r.ctx, r.cancel = context.WithCancel(context.Background())
-
-	w, err := newWatcher(r.c, r.target)
-	if err != nil {
-		return nil, fmt.Errorf("resolver: failed to new watcher: %s", err)
-	}
-	r.wch, err = w.watchChannel(r.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("resolver: failed to new watch channel: %s", err)
-	}
-
-	r.wg.Add(1)
-	go r.watch()
-	return r, nil
-}
 
 type Operation uint8
 
@@ -61,6 +26,38 @@ type WatchChannel <-chan []*Update
 
 type UpdateFunc func(discovery.Result) error
 
+type etcdWatchResolverBuilder struct {
+	c *clientv3.Client
+}
+
+func NewEtcdWatchResolverBuilder(c *clientv3.Client) (WatchResolverBuilder, error) {
+	return &etcdWatchResolverBuilder{c: c}, nil
+}
+
+func (b *etcdWatchResolverBuilder) Build(target string, updateFunc UpdateFunc) (WatchResolver, error) {
+	r := &etcdWatchResolver{
+		c:      b.c,
+		target: target,
+		update: updateFunc,
+	}
+	r.ctx, r.cancel = context.WithCancel(context.Background())
+
+	w, err := newWatcher(r.c, r.target)
+	if err != nil {
+		return nil, fmt.Errorf("resolver: failed to new watcher: %s", err)
+	}
+
+	r.wch, err = w.watchChannel(r.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("resolver: failed to new watch channel: %s", err)
+	}
+
+	r.wg.Add(1)
+	go r.watch()
+	return r, nil
+}
+
+// 适用于监听单一service
 type etcdWatchResolver struct {
 	c      *clientv3.Client
 	target string

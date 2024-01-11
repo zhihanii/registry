@@ -2,16 +2,14 @@ module github.com/zhihanii/registry
 
 go 1.20
 
-require (
-	github.com/zhihanii/discovery v0.0.1
-	go.etcd.io/etcd/client/v3 v3.5.9
-)
+require go.etcd.io/etcd/client/v3 v3.5.9
 
 require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/zhihanii/discovery v0.0.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.9 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.9 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

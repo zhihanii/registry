@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zhihanii/discovery"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -82,14 +81,19 @@ func (e *etcdRegistry) Deregister(endpoint *Endpoint) error {
 }
 
 func (e *etcdRegistry) register(endpoint *Endpoint, leaseID clientv3.LeaseID) error {
-	data, err := json.Marshal(discovery.NewInstance(endpoint.Network,
-		endpoint.Address, endpoint.Weight, endpoint.Tags))
+	data, err := json.Marshal(&instance{
+		Network: endpoint.Network,
+		Address: endpoint.Address,
+		Port:    endpoint.Port,
+		Weight:  endpoint.Weight,
+		Tags:    endpoint.Tags,
+	})
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	_, err = e.etcdClient.Put(ctx, serviceKey(endpoint.ServiceName, endpoint.Address), string(data),
+	_, err = e.etcdClient.Put(ctx, serviceKey(endpoint.ServiceName, endpoint.Address, endpoint.Port), string(data),
 		clientv3.WithLease(leaseID))
 	return err
 }
@@ -97,7 +101,7 @@ func (e *etcdRegistry) register(endpoint *Endpoint, leaseID clientv3.LeaseID) er
 func (e *etcdRegistry) deregister(endpoint *Endpoint) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	_, err := e.etcdClient.Delete(ctx, serviceKey(endpoint.ServiceName, endpoint.Address))
+	_, err := e.etcdClient.Delete(ctx, serviceKey(endpoint.ServiceName, endpoint.Address, endpoint.Port))
 	return err
 }
 
